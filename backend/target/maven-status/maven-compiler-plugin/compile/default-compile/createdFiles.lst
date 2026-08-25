@@ -1,0 +1,11 @@
+com\healthai\anomaly\service\GoogleDriveDownloader.class
+com\healthai\anomaly\config\DatasetSourceProperties$DatasetSource.class
+com\healthai\anomaly\npy\NpyArray.class
+com\healthai\anomaly\config\DatasetSourceProperties.class
+com\healthai\anomaly\dto\NpyPointDto.class
+com\healthai\anomaly\npy\NpyReader.class
+com\healthai\anomaly\dto\DatasetInfoDto.class
+com\healthai\anomaly\controller\DatasetController.class
+com\healthai\anomaly\config\RestTemplateConfig.class
+com\healthai\anomaly\service\RemoteDatasetService.class
+com\healthai\anomaly\AnomalyDetectionApiApplication.class

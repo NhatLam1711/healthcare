@@ -60,11 +60,24 @@ public class DatasetController {
     public Flux<ServerSentEvent<NpyPointDto>> stream(
             @PathVariable String name,
             @RequestParam(defaultValue = "20") long intervalMs,
-            @RequestParam(defaultValue = "false") boolean refresh
+            @RequestParam(defaultValue = "false") boolean refresh,
+            @RequestParam(defaultValue = "20000") long maxDurationMs
     ) {
         NpyArray data = fetchDataOrThrow(name, refresh);
+        int totalRows = data.numRows();
 
-        Flux<ServerSentEvent<NpyPointDto>> points = Flux.range(0, data.numRows())
+        if (totalRows == 0) {
+            return Flux.just(ServerSentEvent.<NpyPointDto>builder().event("complete").build());
+        }
+        // 1. Tính số điểm tối đa được phép phát trong maxDurationMs
+        long maxPointsAllowed = Math.max(1, maxDurationMs / intervalMs);
+
+        // 2. Tính bước nhảy (step): Nếu 2800 dòng và chỉ cho phát 1500 điểm -> step = 2
+        int step = (int) Math.ceil((double) totalRows / maxPointsAllowed);
+
+        Flux<ServerSentEvent<NpyPointDto>> points = Flux.range(0, (totalRows + step - 1) / step)
+                .map(k -> k * step) // Chỉ số dòng thực tế: 0, step, 2*step, ...
+                .filter(i -> i < totalRows)
                 .delayElements(Duration.ofMillis(intervalMs))
                 .map(i -> {
                     NpyPointDto dto = new NpyPointDto(i, data.getRows()[i]);

@@ -1,12 +1,16 @@
 # Dataset API — Healthcare AI Project
 
-Project chỉ gồm đúng 2 API, cả 2 đọc dữ liệu `.npy` trực tiếp từ Google Drive
-(qua link chia sẻ), dùng tên dataset làm định danh.
+Project gồm 2 endpoint, đọc dữ liệu `.npy` trực tiếp từ Google Drive (qua link
+chia sẻ), dùng tên dataset làm định danh.
 
 | API | Method | Endpoint | Chức năng |
 |---|---|---|---|
 | 1 | GET | `/api/v1/dataset/{name}/info` | Thông tin dataset: dimension, length, %anomaly |
-| 2 | GET | `/api/v1/dataset/{name}/stream` | Stream liên tục (SSE) từng điểm cho đến hết file |
+| 2 | GET | `/api/v1/dataset/{name}/stream` | Stream 1 lần duy nhất (SSE): mỗi điểm gồm cả tọa độ (`values`) VÀ kết quả so sánh với model AI (`accuracy`), tính song song — không tách pha nên không chạy gấp đôi thời gian |
+
+"API 3" (so sánh với model) không còn là endpoint hay pha riêng — mỗi điểm
+`point` trong API 2 giờ tự mang theo cả kết quả so sánh, tính ngay trong lúc
+phát chứ không đợi phát xong data rồi mới chạy tiếp.
 
 ## Cấu trúc code
 
@@ -86,16 +90,34 @@ Query param optional: `?refresh=true` — bỏ qua cache, tải lại từ Drive
 Ví dụ: `GET http://localhost:8080/api/v1/dataset/2Dgesture/stream?intervalMs=20`
 
 - `intervalMs`: khoảng cách giữa các điểm (mặc định 20ms)
-- `refresh=true`: bỏ qua cache, tải lại data từ Drive trước khi stream
+- `refresh=true`: bỏ qua cache, tải lại data + label từ Drive trước khi chạy
+- `maxDurationMs`: giới hạn thời lượng stream (mặc định 20000ms) — nếu dataset
+  dài, dữ liệu sẽ được downsample (bỏ bớt điểm) để vừa khoảng thời gian này
 
-Mỗi event:
+Mỗi điểm phát ra (event `point`) gồm **cả tọa độ dữ liệu thô VÀ kết quả so
+sánh với model AI trong cùng 1 event** — tính song song ngay lúc phát, không
+tách 2 pha riêng (nên tổng thời gian chạy = đúng 1 lần stream, không bị gấp đôi):
+
 ```
 event: point
 id: 0
-data: {"index":0,"values":[196.37467,394.45875]}
+data: {"index":0,"values":[196.37467,394.45875],"accuracy":1}
 ```
 
-Kết thúc file, server gửi:
+- `values`: tọa độ dữ liệu thô tại điểm đó (tổng quát N chiều)
+- `accuracy`: so sánh nhãn thật (label) với kết quả dự đoán từ model AI
+  ("API 4" — hiện **CHƯA có thật**, đang dùng `MockPredictionService` sinh kết
+  quả ngẫu nhiên tạm thời; xem `service/PredictionService.java` — khi có API 4
+  thật chỉ cần viết class implement interface này gọi sang, không cần sửa
+  `DatasetController`). "Không đoán" được coi như dự đoán = 0:
+  - `null` = dataset chưa có label (không so sánh được), hoặc độ dài label
+    không khớp độ dài data
+  - `0` = label=0, predicted=0 (đúng — bình thường)
+  - `1` = label=1, predicted=1 (đúng — phát hiện đúng bất thường)
+  - `2` = label=1, predicted=0 (sai — bỏ sót bất thường)
+  - `3` = label=0, predicted=1 (sai — báo động giả)
+
+Kết thúc, server gửi 1 event `complete` duy nhất:
 ```
 event: complete
 data: null

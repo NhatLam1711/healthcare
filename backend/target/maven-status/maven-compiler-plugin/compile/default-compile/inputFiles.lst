@@ -1,4 +1,5 @@
 D:\Workspace\tai lieu hoc tap\Java Advance\HealthCare\testapi_v3\backend\src\main\java\com\healthai\anomaly\AnomalyDetectionApiApplication.java
+D:\Workspace\tai lieu hoc tap\Java Advance\HealthCare\testapi_v3\backend\src\main\java\com\healthai\anomaly\config\CorsConfig.java
 D:\Workspace\tai lieu hoc tap\Java Advance\HealthCare\testapi_v3\backend\src\main\java\com\healthai\anomaly\config\DatasetSourceProperties.java
 D:\Workspace\tai lieu hoc tap\Java Advance\HealthCare\testapi_v3\backend\src\main\java\com\healthai\anomaly\config\RestTemplateConfig.java
 D:\Workspace\tai lieu hoc tap\Java Advance\HealthCare\testapi_v3\backend\src\main\java\com\healthai\anomaly\controller\DatasetController.java

@@ -1,12 +1,13 @@
 # Dataset API — Healthcare AI Project
 
-Project chỉ gồm đúng 2 API, cả 2 đọc dữ liệu `.npy` trực tiếp từ Google Drive
-(qua link chia sẻ), dùng tên dataset làm định danh.
+Project gồm 3 endpoint, đọc dữ liệu `.npy` trực tiếp từ Google Drive (qua link
+chia sẻ), dùng tên dataset làm định danh.
 
 | API | Method | Endpoint | Chức năng |
 |---|---|---|---|
 | 1 | GET | `/api/v1/dataset/{name}/info` | Thông tin dataset: dimension, length, %anomaly |
-| 2 | GET | `/api/v1/dataset/{name}/stream` | Stream liên tục (SSE) từng điểm cho đến hết file |
+| 2 | GET | `/api/v1/dataset/{name}/stream` | Stream dữ liệu thô (SSE): `index`, `values` |
+| 3 | GET | `/api/v1/dataset/{name}/evaluate?model={modelId}` | Giống API 2 nhưng có thêm so sánh với model đã chọn: `index`, `values`, `accuracy` |
 
 ## Cấu trúc code
 
@@ -83,25 +84,57 @@ Query param optional: `?refresh=true` — bỏ qua cache, tải lại từ Drive
 
 ## API 2: GET /api/v1/dataset/{name}/stream
 
+Stream dữ liệu thô, **không so sánh model**.
+
 Ví dụ: `GET http://localhost:8080/api/v1/dataset/2Dgesture/stream?intervalMs=20`
 
 - `intervalMs`: khoảng cách giữa các điểm (mặc định 20ms)
-- `refresh=true`: bỏ qua cache, tải lại data từ Drive trước khi stream
+- `refresh=true`: bỏ qua cache, tải lại data từ Drive trước khi chạy
+- `maxDurationMs`: giới hạn thời lượng stream (mặc định 20000ms) — nếu dataset
+  dài, dữ liệu sẽ được downsample (bỏ bớt điểm) để vừa khoảng thời gian này
 
-Mỗi event:
 ```
 event: point
 id: 0
 data: {"index":0,"values":[196.37467,394.45875]}
 ```
 
-Kết thúc file, server gửi:
+Kết thúc, server gửi 1 event `complete` duy nhất — frontend **bắt buộc lắng
+nghe event này** để tự đóng `EventSource` (nếu không, `EventSource` sẽ tự
+động reconnect vô hạn khi server đóng kết nối).
+
+## API 3: GET /api/v1/dataset/{name}/evaluate?model={modelId}
+
+Giống hệt API 2 nhưng có thêm so sánh với **1 model AI cụ thể** — bắt buộc
+chọn model qua tham số `model` (hệ thống có thể có nhiều model khác nhau).
+Thiếu tham số này sẽ trả lỗi `400 Bad Request`.
+
+Ví dụ: `GET http://localhost:8080/api/v1/dataset/2Dgesture/evaluate?model=isolation-forest-v1&intervalMs=20`
+
+- `model` (**bắt buộc**): id của model cần so sánh. API 4 (service model AI
+  thật) hiện **CHƯA có** — đang dùng `MockPredictionService` sinh kết quả
+  ngẫu nhiên tạm thời, chưa phân biệt hành vi theo từng `model` (mọi model
+  đều random như nhau). Xem `service/PredictionService.java` — khi có API 4
+  thật, chỉ cần viết class implement interface này (dispatch theo `modelId`
+  hoặc gọi sang từng service riêng), không cần sửa `DatasetController`.
+- `intervalMs`, `refresh`, `maxDurationMs`: giống API 2
+
 ```
-event: complete
-data: null
+event: point
+id: 0
+data: {"index":0,"values":[196.37467,394.45875],"accuracy":1}
 ```
-Frontend **bắt buộc lắng nghe event `complete`** để tự đóng `EventSource`
-(nếu không, `EventSource` sẽ tự động reconnect vô hạn khi server đóng kết nối).
+
+- `accuracy`: so sánh nhãn thật (label) với kết quả dự đoán từ model đã
+  chọn. "Không đoán" được coi như dự đoán = 0:
+  - `null` = dataset chưa có label (không so sánh được), hoặc độ dài label
+    không khớp độ dài data
+  - `0` = label=0, predicted=0 (đúng — bình thường)
+  - `1` = label=1, predicted=1 (đúng — phát hiện đúng bất thường)
+  - `2` = label=1, predicted=0 (sai — bỏ sót bất thường)
+  - `3` = label=0, predicted=1 (sai — báo động giả)
+
+Kết thúc, server gửi 1 event `complete` duy nhất, giống API 2.
 
 ## Cache
 

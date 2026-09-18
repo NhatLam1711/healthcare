@@ -1,0 +1,100 @@
+.charts-grid {
+    flex: 1 1 auto;
+    display: grid;
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    min-height: 0;
+}
+
+.chart-panel {
+    background-color: var(--color-white);
+    padding: 0.5rem;
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--color-gray-200);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    min-height: 0;
+}
+
+.chart-panel__header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.25rem;
+    gap: 0.5rem;
+}
+
+.chart-panel__title-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.chart-panel__title {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 700;
+    color: var(--color-gray-800);
+    margin: 0;
+}
+
+.chart-panel__status {
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 500;
+}
+
+.chart-panel__status--streaming {
+    color: var(--color-green-600);
+}
+
+.chart-panel__status--error {
+    color: var(--color-red-600);
+}
+
+.chart-panel__status--idle {
+    color: var(--color-gray-500);
+}
+
+.chart-panel__meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    line-height: 1rem;
+}
+
+.chart-panel__points {
+    background-color: var(--color-gray-100);
+    color: var(--color-gray-600);
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-md);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.chart-panel__reset-btn {
+    background-color: var(--color-gray-100);
+    color: var(--color-gray-700);
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-md);
+    font-weight: 500;
+    transition: background-color 0.15s ease;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: inherit;
+}
+
+.chart-panel__reset-btn:hover {
+    background-color: var(--color-gray-200);
+}
+
+.chart-panel__chart-wrap {
+    flex: 1 1 auto;
+    width: 100%;
+    position: relative;
+    min-height: 0;
+}

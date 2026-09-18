@@ -1,0 +1,19 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: anomaly-detection-api
+
+# Mapping: tên dataset -> link Google Drive (data + label).
+# File trên Drive PHẢI để chế độ chia sẻ "Anyone with the link" thì mới tải được.
+# Thay các link REPLACE_ME bên dưới bằng link thật của bạn.
+app:
+  dataset:
+    sources:
+      "2Dgesture":
+        data-url: "https://drive.google.com/file/d/1PkHIPUXWKwWQXYmy88nbrUuIWw8-whrU/view?usp=drive_link"
+        label-url: "https://drive.google.com/file/d/1Rr5hUvModgeVZeGyLvBAH1n72KBWw7po/view?usp=drive_link"
+      "MSL":
+        data-url: "https://drive.google.com/file/d/1CQi2Qn4BpBtP9ytgATmonTmqa-ksLF52/view?usp=drive_link"
+        label-url: "https://drive.google.com/file/d/14sd8VNt8YW5fiAb2K1-XLlbd652vU0XC/view?usp=drive_link"

@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+body {
+    margin: 0;
+}
+
+/* Custom scrollbar for the ECharts tooltip */
+.echarts-tooltip::-webkit-scrollbar {
+    width: 6px;
+}
+
+.echarts-tooltip::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.echarts-tooltip::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+}

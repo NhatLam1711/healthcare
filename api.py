@@ -341,6 +341,18 @@ class PointResult(BaseModel):
     accuracy: int
 
 
+class InferenceMeta(BaseModel):
+    dataset: str
+    checkpoint: str
+    total_points: int
+    anomaly_points: int
+    inference_time_ms: float
+    train_energy_time_ms: float
+    threshold_ratio: float
+    input_dim: int
+    win_size: int
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
@@ -367,3 +379,39 @@ def predict(req: PredictRequest):
         PointResult(index=i, value=int(pred_pa[i]), accuracy=accuracy[i])
         for i in range(len(pred_pa))
     ]
+
+
+@app.post("/predict/meta", response_model=InferenceMeta)
+def predict_meta(req: PredictRequest):
+    checkpoint = resolve_checkpoint_name(req.dataset, None)
+    try:
+        solver = get_solver(req.dataset, checkpoint)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    start_total = time.time()
+    train_energy_start = time.time()
+    train_energy = compute_train_energy(
+        solver, req.dataset, checkpoint, force_recompute=req.force_recompute_train_energy
+    )
+    train_energy_time_ms = (time.time() - train_energy_start) * 1000.0
+
+    test_energy, gt = compute_test_energy_and_labels(solver)
+    best_pred_pa = find_best_pred_pa(train_energy, test_energy, gt)
+    anomaly_points = int(np.sum(best_pred_pa))
+
+    inference_time_ms = (time.time() - start_total) * 1000.0
+
+    return InferenceMeta(
+        dataset=req.dataset,
+        checkpoint=checkpoint,
+        total_points=int(len(best_pred_pa)),
+        anomaly_points=anomaly_points,
+        inference_time_ms=float(inference_time_ms),
+        train_energy_time_ms=float(train_energy_time_ms),
+        threshold_ratio=float(1.0),
+        input_dim=int(solver.input_c),
+        win_size=int(solver.win_size),
+    )

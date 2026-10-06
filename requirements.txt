@@ -1,0 +1,27 @@
+# Requires Python 3.10 or 3.11 (recommended: use a standard venv, no need for Anaconda).
+#
+# Removed:
+#  - tensorflow: not needed in the main train/inference flow.
+#  - Pillow: no longer imported in the codebase.
+
+numpy==1.26.4
+pandas==2.2.1
+scipy==1.12.0
+scikit-learn==1.4.1.post1
+matplotlib==3.8.3
+six==1.16.0
+statsmodels==0.14.1
+joblib==1.3.2
+tqdm==4.66.2
+arch==6.3.0
+stumpy==1.12.0
+tslearn==0.6.3
+
+# PyTorch - CPU build. If you have NVIDIA GPU, install the +cuXXX build from
+# https://pytorch.org/get-started/locally/ instead of the line below.
+torch==2.2.1
+
+# Server API
+fastapi==0.110.0
+uvicorn[standard]==0.27.1
+pydantic==2.6.3

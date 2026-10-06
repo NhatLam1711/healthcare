@@ -1,0 +1,11 @@
+Copy vào đây các file checkpoint bạn đang có, ĐẶT TÊN THEO ĐÚNG QUY ƯỚC:
+  original_wsize128_checkpoint.pth   <- checkpoint "original" bạn có
+  seed42_wsize128_checkpoint.pth
+  seed43_wsize128_checkpoint.pth
+  seed44_wsize128_checkpoint.pth
+
+(128 = win_size đang cấu hình trong api.py - nếu bạn train với win_size
+khác, đổi số 128 ở tên file cho khớp, VÀ sửa "win_size" trong BASE_CONFIG
+của api.py cho khớp theo).
+
+Rồi XÓA file .txt này đi (chỉ để đánh dấu thư mục, không cần thiết khi chạy).

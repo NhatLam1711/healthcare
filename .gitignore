@@ -1,0 +1,98 @@
+# ==========================
+# Python
+# ==========================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# ==========================
+# Build & Packaging
+# ==========================
+build/
+dist/
+.eggs/
+*.egg-info/
+pip-wheel-metadata/
+
+# ==========================
+# Virtual Environments
+# ==========================
+.env
+.venv/
+venv/
+env/
+ENV/
+
+# ==========================
+# Jupyter
+# ==========================
+.ipynb_checkpoints/
+
+# ==========================
+# Cache
+# ==========================
+.pytest_cache/
+.mypy_cache/
+.pyre/
+.hypothesis/
+.cache/
+
+# ==========================
+# IDE
+# ==========================
+.vscode/
+.idea/
+
+# ==========================
+# Operating System
+# ==========================
+.DS_Store
+Thumbs.db
+
+# ==========================
+# Experiment Checkpoints
+# ==========================
+checkpoints/
+checkpoints_PE/
+
+*.pt
+*.pth
+*.ckpt
+
+# ==========================
+# Experiment Outputs
+# ==========================
+results/
+results_PE/
+
+result
+result.txt
+result.csv
+
+# TensorBoard / WandB
+runs/
+logs/
+wandb/
+
+# ==========================
+# Generated Images
+# ==========================
+pic/
+
+# ==========================
+# Logs
+# ==========================
+*.log
+
+# Archives
+*.zip
+*.7z
+*.rar
+*.tar
+*.gz
+*.bz2
+
+**result**
+
+dataset

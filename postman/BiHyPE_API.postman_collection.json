@@ -1,0 +1,673 @@
+{
+  "info": {
+    "_postman_id": "64422edf-488a-4894-bd03-7aed345fec0a",
+    "name": "BiHyPE Time-Series Forecasting API",
+    "description": "Collection test cho Backend API du bao chuoi thoi gian (Autoformer + BiHyPE Positional Encoding), ho tro da dataset (ETTm1, electricity, exchange_rate, traffic, weather). Doi bien {{dataset}} / {{target}} trong Environment de test nhanh tung dataset.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "0. Root & Datasets",
+      "item": [
+        {
+          "name": "Root Info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [],
+              "query": []
+            },
+            "description": "Kiem tra server online."
+          },
+          "response": []
+        },
+        {
+          "name": "List Datasets",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/datasets",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "datasets"
+              ],
+              "query": []
+            },
+            "description": "Goi dau tien de lay danh sach dataset + target hop le. Dung ket qua nay de dien bien {{dataset}} / {{target}}."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has status success', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.status).to.eql('success');",
+                  "});",
+                  "pm.test('Has 5 datasets', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.datasets.length).to.eql(5);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "1. Historical (API 1)",
+      "item": [
+        {
+          "name": "Historical REST",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/historical?dataset={{dataset}}&target={{target}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "historical"
+              ],
+              "query": [
+                {
+                  "key": "dataset",
+                  "value": "{{dataset}}"
+                },
+                {
+                  "key": "target",
+                  "value": "{{target}}"
+                }
+              ]
+            },
+            "description": "Tra 96 moc lich su thuc te. Params: dataset, target."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has status success', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.status).to.eql('success');",
+                  "});",
+                  "pm.test('Response has data array', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Historical SSE Stream",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/stream/historical?dataset={{dataset}}&target={{target}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "stream",
+                "historical"
+              ],
+              "query": [
+                {
+                  "key": "dataset",
+                  "value": "{{dataset}}"
+                },
+                {
+                  "key": "target",
+                  "value": "{{target}}"
+                }
+              ]
+            },
+            "description": "Server-Sent Events, 300ms/diem, 96 diem (~29s). Postman (ban >= v10) se hien thi tung event real-time trong tab Response. Neu khong thay stream, dung curl -N hoac browser EventSource."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Forecast Comparison (API 2)",
+      "item": [
+        {
+          "name": "Forecast Comparison REST",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/forecast-comparison?dataset={{dataset}}&target={{target}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "forecast-comparison"
+              ],
+              "query": [
+                {
+                  "key": "dataset",
+                  "value": "{{dataset}}"
+                },
+                {
+                  "key": "target",
+                  "value": "{{target}}"
+                }
+              ]
+            },
+            "description": "Chay inference AI thuc te, tra 96 moc so sanh Actual vs Forecast. Params: dataset, target."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has status success', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.status).to.eql('success');",
+                  "});",
+                  "pm.test('Response has data array', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.data).to.be.an('array');",
+                  "});",
+                  "pm.test('forecast_count is 96', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.forecast_count).to.eql(96);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Forecast Comparison SSE Stream",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/stream/forecast-comparison?dataset={{dataset}}&target={{target}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "stream",
+                "forecast-comparison"
+              ],
+              "query": [
+                {
+                  "key": "dataset",
+                  "value": "{{dataset}}"
+                },
+                {
+                  "key": "target",
+                  "value": "{{target}}"
+                }
+              ]
+            },
+            "description": "SSE realtime, 300ms/diem, 96 diem (~29s)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Metadata (API 3)",
+      "item": [
+        {
+          "name": "Metadata",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/metadata?dataset={{dataset}}&target={{target}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "metadata"
+              ],
+              "query": [
+                {
+                  "key": "dataset",
+                  "value": "{{dataset}}"
+                },
+                {
+                  "key": "target",
+                  "value": "{{target}}"
+                }
+              ]
+            },
+            "description": "Thong so model, thiet bi, thoi gian inference, MAE/MSE."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has status success', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.status).to.eql('success');",
+                  "});",
+                  "pm.test('Has performance_metrics', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.performance_metrics).to.have.property('eval_mae');",
+                  "    pm.expect(body.performance_metrics).to.have.property('eval_mse');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Multi-Dataset Examples (gia tri co dinh, khong dung bien)",
+      "item": [
+        {
+          "name": "ETTm1 - OT",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/forecast-comparison?dataset=ETTm1&target=OT",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "forecast-comparison"
+              ],
+              "query": [
+                {
+                  "key": "dataset",
+                  "value": "ETTm1"
+                },
+                {
+                  "key": "target",
+                  "value": "OT"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has status success', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.status).to.eql('success');",
+                  "});",
+                  "pm.test('Response has data array', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "electricity - col 10",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/forecast-comparison?dataset=electricity&target=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "forecast-comparison"
+              ],
+              "query": [
+                {
+                  "key": "dataset",
+                  "value": "electricity"
+                },
+                {
+                  "key": "target",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has status success', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.status).to.eql('success');",
+                  "});",
+                  "pm.test('Response has data array', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "exchange_rate - OT",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/forecast-comparison?dataset=exchange_rate&target=OT",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "forecast-comparison"
+              ],
+              "query": [
+                {
+                  "key": "dataset",
+                  "value": "exchange_rate"
+                },
+                {
+                  "key": "target",
+                  "value": "OT"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has status success', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.status).to.eql('success');",
+                  "});",
+                  "pm.test('Response has data array', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "traffic - col 5",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/forecast-comparison?dataset=traffic&target=5",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "forecast-comparison"
+              ],
+              "query": [
+                {
+                  "key": "dataset",
+                  "value": "traffic"
+                },
+                {
+                  "key": "target",
+                  "value": "5"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has status success', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.status).to.eql('success');",
+                  "});",
+                  "pm.test('Response has data array', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "weather - T (degC) [target co dau cach]",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/forecast-comparison?dataset=weather&target=T (degC)",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "forecast-comparison"
+              ],
+              "query": [
+                {
+                  "key": "dataset",
+                  "value": "weather"
+                },
+                {
+                  "key": "target",
+                  "value": "T (degC)"
+                }
+              ]
+            },
+            "description": "Postman tu dong URL-encode gia tri Params, khong can tu encode nhu curl/PowerShell."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has status success', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.status).to.eql('success');",
+                  "});",
+                  "pm.test('Response has data array', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Error Cases",
+      "item": [
+        {
+          "name": "Invalid dataset -> 400",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/historical?dataset=khong_ton_tai",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "historical"
+              ],
+              "query": [
+                {
+                  "key": "dataset",
+                  "value": "khong_ton_tai"
+                }
+              ]
+            },
+            "description": "Dataset khong ton tai phai tra 400 kem danh sach dataset kha dung."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Invalid dataset returns 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invalid target -> 400",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/historical?dataset=ETTm1&target=khong_ton_tai",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "historical"
+              ],
+              "query": [
+                {
+                  "key": "dataset",
+                  "value": "ETTm1"
+                },
+                {
+                  "key": "target",
+                  "value": "khong_ton_tai"
+                }
+              ]
+            },
+            "description": "Target khong thuoc dataset phai tra 400."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Invalid dataset returns 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "dataset",
+      "value": "ETTm1",
+      "type": "string"
+    },
+    {
+      "key": "target",
+      "value": "OT",
+      "type": "string"
+    }
+  ]
+}

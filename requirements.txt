@@ -1,0 +1,15 @@
+# pandas
+# scikit-learn
+# numpy
+# matplotlib
+# reformer_pytorch
+
+--extra-index-url https://download.pytorch.org/whl/cpu
+fastapi
+uvicorn[standard]
+pandas
+scikit-learn
+numpy
+matplotlib
+torch
+reformer_pytorch

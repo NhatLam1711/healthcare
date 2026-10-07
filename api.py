@@ -161,8 +161,6 @@ def get_solver(dataset: str, checkpoint: str) -> Solver:
     try:
         solver = Solver(config)
     except FileNotFoundError as e:
-        # Solver(config) tự load train/test/test_label.npy ngay lúc khởi tạo -
-        # lỗi ở đây nghĩa là THIẾU FILE DỮ LIỆU, không phải thiếu checkpoint.
         raise FileNotFoundError(
             f"Thiếu file dữ liệu trong '{config['data_path']}' (cần đủ 3 file: "
             f"{dataset}_train.npy, {dataset}_test.npy, {dataset}_test_label.npy). "

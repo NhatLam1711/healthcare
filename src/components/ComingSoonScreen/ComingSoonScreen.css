@@ -1,0 +1,48 @@
+.coming-soon-screen {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.coming-soon-screen__icon {
+    width: 6rem;
+    height: 6rem;
+    color: var(--color-gray-300);
+    margin-bottom: 1rem;
+}
+
+.coming-soon-screen__badge {
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-gray-500);
+    background-color: var(--color-gray-200);
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-full);
+    margin-bottom: 1rem;
+}
+
+.coming-soon-screen__title {
+    font-size: 1.875rem;
+    line-height: 2.25rem;
+    font-weight: 700;
+    color: var(--color-gray-700);
+    margin: 0 0 0.5rem;
+}
+
+.coming-soon-screen__text {
+    color: var(--color-gray-500);
+    margin: 0 0 0.25rem;
+    max-width: 28rem;
+}
+
+.coming-soon-screen__hint {
+    color: var(--color-gray-400);
+    font-size: 0.875rem;
+    margin: 0;
+}

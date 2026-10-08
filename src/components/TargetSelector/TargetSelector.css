@@ -1,0 +1,110 @@
+.target-selector {
+    position: relative;
+}
+
+.target-selector__button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: var(--color-gray-50);
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-lg);
+    padding: 0.25rem 0.5rem;
+    font: inherit;
+    cursor: pointer;
+}
+
+.target-selector__button:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.target-selector__label {
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 600;
+    color: var(--color-gray-500);
+}
+
+.target-selector__value {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 500;
+    color: var(--color-purple-700);
+    max-width: 10rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.target-selector__overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+}
+
+.target-selector__panel {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    left: 0;
+    width: 16rem;
+    max-height: 20rem;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    z-index: 31;
+    overflow: hidden;
+}
+
+.target-selector__search {
+    margin: 0.5rem;
+    padding: 0.375rem 0.5rem;
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    font-family: inherit;
+    outline: none;
+}
+
+.target-selector__search:focus {
+    border-color: var(--color-purple-200);
+}
+
+.target-selector__list {
+    overflow-y: auto;
+    padding: 0.25rem;
+}
+
+.target-selector__item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 0.4rem 0.6rem;
+    border: none;
+    background: none;
+    border-radius: var(--radius-md);
+    font-size: 0.8125rem;
+    color: var(--color-gray-700);
+    cursor: pointer;
+    font: inherit;
+}
+
+.target-selector__item:hover {
+    background-color: var(--color-gray-100);
+}
+
+.target-selector__item--active {
+    background-color: var(--color-purple-50);
+    color: var(--color-purple-700);
+    font-weight: 600;
+}
+
+.target-selector__empty {
+    padding: 0.75rem;
+    font-size: 0.8125rem;
+    color: var(--color-gray-400);
+    text-align: center;
+}

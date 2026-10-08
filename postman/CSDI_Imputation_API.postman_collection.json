@@ -1,0 +1,199 @@
+{
+  "info": {
+    "_postman_id": "97d99fb7-d6b6-4ef9-a6e1-4b0959789fb2",
+    "name": "CSDI Imputation API",
+    "description": "Backend API phục vụ kết quả imputation đã được pretrained model (CSDI/BiHyPE) sinh sẵn, đọc lại từ Checkpoint_PE_CSDI/save/*/generated_outputs_nsample100.pk. Xem BACKEND_API.md ở root project để biết chi tiết luồng xử lý và format JSON/SSE.\n\nTrước khi chạy: start server bằng\n  .venv\\Scripts\\python.exe -m backend.main\nvà chọn environment 'CSDI Local' (biến {{baseUrl}} = http://127.0.0.1:8800).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Meta",
+      "item": [
+        {
+          "name": "Meta - pm25",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/pm25/meta",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "pm25", "meta"]
+            },
+            "description": "num_samples=82, num_timesteps=36, num_features=36 (Station_1..Station_36)."
+          },
+          "response": []
+        },
+        {
+          "name": "Meta - physio",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/physio/meta",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "physio", "meta"]
+            },
+            "description": "num_samples=799, num_timesteps=48, num_features=35 (tên thật: DiasABP, HR, Na, ...)."
+          },
+          "response": []
+        },
+        {
+          "name": "Meta - electricity",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/electricity/meta",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "electricity", "meta"]
+            },
+            "description": "num_samples=7, num_timesteps=192, num_features=370 (Client_1..Client_370)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "pm25",
+      "item": [
+        {
+          "name": "Real series (SSE) - sample 0, Station_1",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/pm25/series/0/0/real?interval_ms=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "pm25", "series", "0", "0", "real"],
+              "query": [{ "key": "interval_ms", "value": "50" }]
+            },
+            "description": "API 1 - chỉ giá trị thật (observed/missing), SSE: event 'point' lặp lại rồi kết bằng event 'done'."
+          },
+          "response": []
+        },
+        {
+          "name": "Full series (SSE) - sample 0, Station_1",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/pm25/series/0/0/full?interval_ms=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "pm25", "series", "0", "0", "full"],
+              "query": [{ "key": "interval_ms", "value": "50" }]
+            },
+            "description": "API 2 - giá trị thật + dự đoán (median, confidence 50/90%), SSE."
+          },
+          "response": []
+        },
+        {
+          "name": "Error - sample_id ngoài phạm vi (400)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/pm25/series/9999/0/real",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "pm25", "series", "9999", "0", "real"]
+            },
+            "description": "pm25 chỉ có 82 samples (0..81) -> mong đợi 400."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "physio",
+      "item": [
+        {
+          "name": "Real series (SSE) - sample 0, HR",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/physio/series/0/1/real?interval_ms=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "physio", "series", "0", "1", "real"],
+              "query": [{ "key": "interval_ms", "value": "50" }]
+            },
+            "description": "feature_id=1 là HR (xem Meta - physio để tra tên <-> id). scaler/mean_scaler của physio là scalar (1, 0), không per-feature."
+          },
+          "response": []
+        },
+        {
+          "name": "Full series (SSE) - sample 0, HR",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/physio/series/0/1/full?interval_ms=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "physio", "series", "0", "1", "full"],
+              "query": [{ "key": "interval_ms", "value": "50" }]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "electricity",
+      "item": [
+        {
+          "name": "Real series (SSE) - sample 0, Client_1",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/electricity/series/0/0/real?interval_ms=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "electricity", "series", "0", "0", "real"],
+              "query": [{ "key": "interval_ms", "value": "20" }]
+            },
+            "description": "192 timesteps -> dùng interval_ms nhỏ hơn để không chờ quá lâu khi test."
+          },
+          "response": []
+        },
+        {
+          "name": "Full series (SSE) - sample 0, Client_1",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/electricity/series/0/0/full?interval_ms=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "electricity", "series", "0", "0", "full"],
+              "query": [{ "key": "interval_ms", "value": "20" }]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Errors",
+      "item": [
+        {
+          "name": "Unknown dataset (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/not_a_real_dataset/meta",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "not_a_real_dataset", "meta"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8800",
+      "type": "string"
+    }
+  ]
+}

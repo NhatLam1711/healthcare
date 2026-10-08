@@ -32,6 +32,7 @@ CẤU TRÚC THƯ MỤC MONG ĐỢI (tạo thủ công, repo không tự tạo):
     cache/                      <- tự tạo, chứa train_energy đã cache
 """
 
+import os
 import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -71,9 +72,9 @@ BASE_CONFIG = {
     "anormly_ratio": 1.0,
 }
 
-CHECKPOINT_DIR = Path("checkpoints")
-DATASET_DIR = Path("dataset")
-CACHE_DIR = Path("cache")
+CHECKPOINT_DIR = Path(os.environ.get("CHECKPOINT_DIR", "checkpoints"))
+DATASET_DIR = Path(os.environ.get("DATASET_DIR", "dataset"))
+CACHE_DIR = Path(os.environ.get("CACHE_DIR", "cache"))
 CACHE_DIR.mkdir(exist_ok=True)
 
 DEFAULT_CHECKPOINT = "original"

@@ -32,6 +32,7 @@ CẤU TRÚC THƯ MỤC MONG ĐỢI (tạo thủ công, repo không tự tạo):
     cache/                      <- tự tạo, chứa train_energy đã cache
 """
 
+import json
 import os
 import time
 from pathlib import Path
@@ -98,6 +99,11 @@ STEP_TRAIN = 1
 app = FastAPI(title="Anomaly Transformer - Prediction API")
 
 _solver_cache: Dict[Tuple[str, str], Solver] = {}
+_inference_cache: Dict[Tuple[str, str], Dict[str, object]] = {}
+
+
+def inference_cache_path(dataset: str, checkpoint: str) -> Path:
+    return CACHE_DIR / f"{dataset}__{checkpoint}__inference.json"
 
 
 def checkpoint_path(dataset: str, checkpoint: str, win_size: int) -> Path:
@@ -149,6 +155,8 @@ def get_solver(dataset: str, checkpoint: str) -> Solver:
 
     config = dict(BASE_CONFIG)
     config["dataset"] = dataset
+    config["checkpoint"] = checkpoint
+    config["model_save_path"] = str(CHECKPOINT_DIR / dataset)
     config["data_path"] = str(DATASET_DIR / dataset)
     meta = infer_checkpoint_metadata(ckpt)
     if meta["d_model"] is not None:
@@ -326,6 +334,38 @@ def compute_accuracy(pred_pa, gt) -> List[int]:
     return result
 
 
+def load_inference_cache(dataset: str, checkpoint: str) -> Optional[Dict[str, object]]:
+    cache_file = inference_cache_path(dataset, checkpoint)
+    if not cache_file.exists():
+        return None
+
+    try:
+        with open(cache_file, "r", encoding="utf-8") as f:
+            loaded = json.load(f)
+        return loaded
+    except (json.JSONDecodeError, OSError):
+        return None
+
+
+def get_cached_inference_result(solver: Solver, dataset: str, checkpoint: str, force_recompute: bool = False) -> Dict[str, object]:
+    cache_key = (dataset, checkpoint)
+    if not force_recompute and cache_key in _inference_cache:
+        return _inference_cache[cache_key]
+
+    cache_file = inference_cache_path(dataset, checkpoint)
+    if not force_recompute:
+        cached = load_inference_cache(dataset, checkpoint)
+        if cached is not None:
+            _inference_cache[cache_key] = cached
+            return cached
+
+    best_results = solver.test()
+    with open(cache_file, "w", encoding="utf-8") as f:
+        json.dump(best_results, f, default=lambda x: x.tolist() if isinstance(x, np.ndarray) else float(x))
+    _inference_cache[cache_key] = best_results
+    return best_results
+
+
 # ----------------------------------------------------------------------
 # API
 # ----------------------------------------------------------------------
@@ -350,6 +390,9 @@ class InferenceMeta(BaseModel):
     threshold_ratio: float
     input_dim: int
     win_size: int
+    prec_pa: float
+    rec_pa: float
+    f1_pa: float
 
 
 @app.get("/health")
@@ -360,6 +403,17 @@ def health():
 @app.post("/predict", response_model=List[PointResult])
 def predict(req: PredictRequest):
     checkpoint = resolve_checkpoint_name(req.dataset, None)
+
+    cached = load_inference_cache(req.dataset, checkpoint)
+    if cached is not None and not req.force_recompute_train_energy:
+        pred_pa = np.asarray(cached.get("pred_pa", []), dtype=int)
+        gt = np.asarray(cached.get("gt", []), dtype=int)
+        accuracy = compute_accuracy(pred_pa, gt)
+        return [
+            PointResult(index=i, value=int(pred_pa[i]), accuracy=accuracy[i])
+            for i in range(len(pred_pa))
+        ]
+
     try:
         solver = get_solver(req.dataset, checkpoint)
     except FileNotFoundError as e:
@@ -367,11 +421,11 @@ def predict(req: PredictRequest):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    train_energy = compute_train_energy(
+    best_results = get_cached_inference_result(
         solver, req.dataset, checkpoint, force_recompute=req.force_recompute_train_energy
     )
-    test_energy, gt = compute_test_energy_and_labels(solver)
-    pred_pa = find_best_pred_pa(train_energy, test_energy, gt)
+    pred_pa = np.asarray(best_results.get("pred_pa", []), dtype=int)
+    gt = np.asarray(best_results.get("gt", []), dtype=int)
     accuracy = compute_accuracy(pred_pa, gt)
 
     return [
@@ -383,6 +437,25 @@ def predict(req: PredictRequest):
 @app.post("/predict/meta", response_model=InferenceMeta)
 def predict_meta(req: PredictRequest):
     checkpoint = resolve_checkpoint_name(req.dataset, None)
+
+    cached = load_inference_cache(req.dataset, checkpoint)
+    if cached is not None and not req.force_recompute_train_energy:
+        best_pred_pa = np.asarray(cached.get("pred_pa", []), dtype=int)
+        return InferenceMeta(
+            dataset=req.dataset,
+            checkpoint=checkpoint,
+            total_points=int(len(best_pred_pa)),
+            anomaly_points=int(np.sum(best_pred_pa)),
+            inference_time_ms=float(0.0),
+            train_energy_time_ms=float(0.0),
+            threshold_ratio=float(cached.get("ratio", 1.0)),
+            input_dim=int(0),
+            win_size=int(0),
+            prec_pa=float(cached.get("prec_pa", 0.0)),
+            rec_pa=float(cached.get("rec_pa", 0.0)),
+            f1_pa=float(cached.get("f1_pa", 0.0)),
+        )
+
     try:
         solver = get_solver(req.dataset, checkpoint)
     except FileNotFoundError as e:
@@ -391,17 +464,13 @@ def predict_meta(req: PredictRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
     start_total = time.time()
-    train_energy_start = time.time()
-    train_energy = compute_train_energy(
+    best_results = get_cached_inference_result(
         solver, req.dataset, checkpoint, force_recompute=req.force_recompute_train_energy
     )
-    train_energy_time_ms = (time.time() - train_energy_start) * 1000.0
-
-    test_energy, gt = compute_test_energy_and_labels(solver)
-    best_pred_pa = find_best_pred_pa(train_energy, test_energy, gt)
-    anomaly_points = int(np.sum(best_pred_pa))
-
     inference_time_ms = (time.time() - start_total) * 1000.0
+
+    best_pred_pa = np.asarray(best_results.get("pred_pa", []), dtype=int)
+    anomaly_points = int(np.sum(best_pred_pa))
 
     return InferenceMeta(
         dataset=req.dataset,
@@ -409,8 +478,11 @@ def predict_meta(req: PredictRequest):
         total_points=int(len(best_pred_pa)),
         anomaly_points=anomaly_points,
         inference_time_ms=float(inference_time_ms),
-        train_energy_time_ms=float(train_energy_time_ms),
-        threshold_ratio=float(1.0),
+        train_energy_time_ms=float(0.0),
+        threshold_ratio=float(best_results.get("ratio", 1.0)),
         input_dim=int(solver.input_c),
         win_size=int(solver.win_size),
+        prec_pa=float(best_results.get("prec_pa", 0.0)),
+        rec_pa=float(best_results.get("rec_pa", 0.0)),
+        f1_pa=float(best_results.get("f1_pa", 0.0)),
     )

@@ -226,16 +226,37 @@ class Solver(object):
         return avg_auc_3d, avg_ap_3d
 
     def test(self):
-        self.model.load_state_dict(
-            torch.load(
-                os.path.join(str(self.model_save_path), str(self.dataset) + '_wsize' + str(self.win_size) + '_checkpoint.pth'),
-                weights_only=True
-                ))
+        checkpoint_candidates = []
+        checkpoint_name = getattr(self, 'checkpoint', None)
+
+        if checkpoint_name:
+            checkpoint_candidates.extend([
+                os.path.join(str(self.model_save_path), str(self.dataset), f"{checkpoint_name}_wsize{self.win_size}_checkpoint.pth"),
+                os.path.join(str(self.model_save_path), f"{checkpoint_name}_wsize{self.win_size}_checkpoint.pth"),
+            ])
+
+        checkpoint_candidates.extend([
+            os.path.join(str(self.model_save_path), str(self.dataset), str(self.dataset) + '_wsize' + str(self.win_size) + '_checkpoint.pth'),
+            os.path.join(str(self.model_save_path), str(self.dataset) + '_wsize' + str(self.win_size) + '_checkpoint.pth'),
+        ])
+
+        checkpoint_path = None
+        for path in checkpoint_candidates:
+            if os.path.exists(path):
+                checkpoint_path = path
+                break
+
+        if checkpoint_path is None:
+            raise FileNotFoundError(
+                f"Không tìm thấy checkpoint cho dataset={self.dataset}, win_size={self.win_size}. "
+                f"Các đường dẫn thử: {checkpoint_candidates}"
+            )
+
+        self.model.load_state_dict(torch.load(checkpoint_path, map_location=self.device))
         self.model.eval()
         temperature = 50
 
-        print("======================TEST MODE (OPTIMIZING RATIO)======================")
-        criterion = nn.MSELoss(reduction="none")  # 'reduce=False' đã deprecated, 'reduction=none' tương đương
+        criterion = nn.MSELoss(reduction="none")
 
         # --- Bước 1: Thu thập Energy từ Train Set (chỉ chạy 1 lần) ---
         train_energy = []
@@ -243,11 +264,10 @@ class Solver(object):
             input = input_data.float().to(self.device)
             output, series, prior, _ = self.model(input)
             loss = torch.mean(criterion(input, output), dim=-1)
-            
+
             series_loss = 0.0
             prior_loss = 0.0
             for u in range(len(prior)):
-                # Tối ưu hóa việc tính toán chuẩn hóa prior
                 prior_norm = prior[u] / torch.unsqueeze(torch.sum(prior[u], dim=-1), dim=-1).repeat(1, 1, 1, self.win_size)
                 series_loss += my_kl_loss(series[u], prior_norm.detach()) * temperature
                 prior_loss += my_kl_loss(prior_norm, series[u].detach()) * temperature
@@ -280,86 +300,71 @@ class Solver(object):
         test_energy = np.concatenate(test_energy, axis=0).reshape(-1)
         test_labels = np.concatenate(test_labels, axis=0).reshape(-1).astype(int)
         combined_energy = np.concatenate([train_energy, test_energy], axis=0)
-        
-        # --- Bước 3: Tính toán AUC-ROC và AUC-PR (Không phụ thuộc threshold/ratio) ---
-        
-
         gt = test_labels.copy()
-        # --- Bước 4: Quét qua các giá trị Ratio để tìm Best Performance ---
+
+        # --- Bước 3: Quét qua các giá trị Ratio để tìm Best Performance ---
         best_f1 = -1
         best_f1_no_pa = -1
         best_results = {}
-        
-        # Tạo danh sách ratio từ 0.1 đến 1.5 với bước nhảy 0.1
+        best_pred_pa = None
+
         ratios = np.arange(0.1, 1.6, 0.1)
-        
+
         for ratio in ratios:
-            # Tính ngưỡng dựa trên ratio hiện tại
             thresh = np.percentile(combined_energy, 100 - ratio)
-            
-            # Dự đoán thô (Raw prediction)
             pred_raw = (test_energy > thresh).astype(int)
             gt = test_labels.copy()
-            
-            # Detection Adjustment (Cơ chế Point Adjustment - PA)
+
             pred_pa = pred_raw.copy()
             anomaly_state = False
             for i in range(len(gt)):
                 if gt[i] == 1 and pred_pa[i] == 1 and not anomaly_state:
                     anomaly_state = True
                     for j in range(i, 0, -1):
-                        if gt[j] == 0: break
-                        else: pred_pa[j] = 1
+                        if gt[j] == 0:
+                            break
+                        pred_pa[j] = 1
                     for j in range(i, len(gt)):
-                        if gt[j] == 0: break
-                        else: pred_pa[j] = 1
+                        if gt[j] == 0:
+                            break
+                        pred_pa[j] = 1
                 elif gt[i] == 0:
                     anomaly_state = False
                 if anomaly_state:
                     pred_pa[i] = 1
 
-            # Tính toán metric cho PA
             prec_pa, rec_pa, f1_pa, _ = precision_recall_fscore_support(gt, pred_pa, average='binary', zero_division=0)
-
             _, _, f1_no_pa, _ = precision_recall_fscore_support(gt, pred_raw, average='binary', zero_division=0)
 
             if f1_pa > best_f1:
                 best_f1 = f1_pa
                 best_results = {
-                    "ratio": ratio,
-                    "prec_pa": prec_pa,
-                    "rec_pa": rec_pa,
-                    "f1_pa": f1_pa, # Đây là F1-PA
+                    "ratio": float(ratio),
+                    "prec_pa": float(prec_pa),
+                    "rec_pa": float(rec_pa),
+                    "f1_pa": float(f1_pa),
+                    "pred_pa": pred_pa.copy(),
+                    "gt": gt.copy(),
                 }
             if f1_no_pa > best_f1_no_pa:
                 best_f1_no_pa = f1_no_pa
-                best_results['f1_no_pa'] = best_f1_no_pa
-                
+                best_results['f1_no_pa'] = float(f1_no_pa)
 
-        # Tính toán AUC Metrics
         auc_roc = roc_auc_score(test_labels, test_energy)
         prec_curves, rec_curves, _ = precision_recall_curve(test_labels, test_energy)
         auc_pr = auc(rec_curves, prec_curves)
-        best_results['auc_roc'] = auc_roc
-        best_results['auc_pr'] = auc_pr
+        best_results['auc_roc'] = float(auc_roc)
+        best_results['auc_pr'] = float(auc_pr)
 
-        # Tính toán VUS Metrics
-        vus_roc, vus_pr = self.compute_vus(gt, test_energy, window_size=100)        # Thay đổi self.win_size thành 100 default
-        best_results['vus_roc'] = vus_roc
-        best_results['vus_pr'] = vus_pr
-
-        # print("\n====================== BEST RESULT (BY AFF-F1) ======================")
-        print("\n====================== BEST RESULT ======================")
-        print(f"Best Ratio    : {best_results['ratio']:.1f}")
-        print(f"Precision (PA): {best_results['prec_pa']:.4f}")
-        print(f"Recall (PA)   : {best_results['rec_pa']:.4f}")
-        print(f"F1 (PA)       : {best_results['f1_pa']:.4f}")
-        print(f"F1 (No PA)    : {best_results['f1_no_pa']:.4f}")
-        print(f"AUC-ROC       : {best_results['auc_roc']:.4f} | AUC-PR: {best_results['auc_pr']:.4f}")
-        print(f"VUS-ROC       : {best_results['vus_roc']:.4f} | VUS-PR: {best_results['vus_pr']:.4f}")
+        vus_roc, vus_pr = self.compute_vus(gt, test_energy, window_size=100)
+        best_results['vus_roc'] = float(vus_roc)
+        best_results['vus_pr'] = float(vus_pr)
+        best_results['pred_pa'] = best_results.get('pred_pa', np.array([], dtype=int))
+        best_results['gt'] = best_results.get('gt', gt)
 
         self.save_results(best_results=best_results, scheduler=True)
-        
+        return best_results
+
 
 
 

@@ -1,0 +1,10 @@
+====================== BEST RESULT ======================
+Best Ratio    : 0.6
+Precision (PA): 0.9437
+Recall (PA)   : 0.8930
+F1 (PA)       : 0.9176
+F1 (No PA)    : 0.0248
+AUC-ROC       : 0.4994
+AUC-PR        : 0.1025
+VUS-ROC       : 0.5058
+VUS-PR        : 0.1261

@@ -69,6 +69,9 @@ class Solver(object):
     def __init__(self, config):
 
         self.__dict__.update(Solver.DEFAULTS, **config)
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        if torch.cuda.is_available():
+            torch.cuda.set_device(self.device)
 
         self.train_loader = get_loader_segment(self.data_path, batch_size=self.batch_size, win_size=self.win_size,
                                                mode='train',
@@ -84,7 +87,7 @@ class Solver(object):
                                               dataset=self.dataset)
 
         self.build_model()
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.model = self.model.to(self.device)
         self.criterion = nn.MSELoss()
 
     def build_model(self):
@@ -103,7 +106,7 @@ class Solver(object):
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
 
         if torch.cuda.is_available():
-            self.model.cuda()
+            self.model = self.model.to(self.device)
 
     def vali(self, vali_loader):
         self.model.eval()

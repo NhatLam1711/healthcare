@@ -78,12 +78,47 @@ DATASET_DIR = Path(os.environ.get("DATASET_DIR", "dataset"))
 CACHE_DIR = Path(os.environ.get("CACHE_DIR", "cache"))
 CACHE_DIR.mkdir(exist_ok=True)
 
-DEFAULT_CHECKPOINT = "original"
+DEFAULT_CHECKPOINT = "seed42"
 
 
-def resolve_checkpoint_name(dataset: str, requested: Optional[str]) -> str:
-    """API chỉ hỗ trợ checkpoint gốc duy nhất."""
-    return DEFAULT_CHECKPOINT
+def list_available_checkpoints(dataset: str) -> List[str]:
+    """Liệt kê tên checkpoint có sẵn trong thư mục checkpoints/<dataset>/."""
+    ckpt_dir = CHECKPOINT_DIR / dataset
+    if not ckpt_dir.exists():
+        return []
+
+    names = []
+    for path in sorted(ckpt_dir.iterdir()):
+        if not path.is_file() or path.suffix.lower() != ".pth":
+            continue
+        stem = path.stem
+        if not stem.endswith("_checkpoint"):
+            continue
+        name = stem[: -len("_checkpoint")]
+        if "_wsize" in name:
+            name = name.rsplit("_wsize", 1)[0]
+        if name:
+            names.append(name)
+    return names
+
+
+def resolve_checkpoint_name(dataset: str, requested: Optional[str] = None) -> str:
+    """API chỉ hỗ trợ 1 checkpoint duy nhất: seed42."""
+    available = list_available_checkpoints(dataset)
+    required = DEFAULT_CHECKPOINT
+
+    if required in available:
+        return required
+
+    lowered = {name.lower(): name for name in available}
+    if required.lower() in lowered:
+        return lowered[required.lower()]
+
+    raise FileNotFoundError(
+        f"Dataset '{dataset}' chỉ hỗ trợ checkpoint '{required}'. "
+        f"Cần file: '{required}_wsize128_checkpoint.pth' trong '{CHECKPOINT_DIR / dataset}'. "
+        f"Hiện có: {available if available else 'không có checkpoint nào'}"
+    )
 
 # Step dùng khi quét train set để tính train_energy (baseline threshold).
 # Bản GỐC hardcode step=1 bất kể truyền gì (gần như 1 window/điểm dữ liệu)
@@ -382,7 +417,6 @@ class PointResult(BaseModel):
 
 class InferenceMeta(BaseModel):
     dataset: str
-    checkpoint: str
     total_points: int
     anomaly_points: int
     inference_time_ms: float
@@ -393,6 +427,10 @@ class InferenceMeta(BaseModel):
     prec_pa: float
     rec_pa: float
     f1_pa: float
+    auc_roc: float
+    auc_pr: float
+    vus_roc: float
+    vus_pr: float
 
 
 @app.get("/health")
@@ -400,9 +438,14 @@ def health():
     return {"status": "ok"}
 
 
+@app.get("/models/{dataset}")
+def list_models(dataset: str):
+    return {"dataset": dataset, "checkpoints": list_available_checkpoints(dataset)}
+
+
 @app.post("/predict", response_model=List[PointResult])
 def predict(req: PredictRequest):
-    checkpoint = resolve_checkpoint_name(req.dataset, None)
+    checkpoint = resolve_checkpoint_name(req.dataset)
 
     cached = load_inference_cache(req.dataset, checkpoint)
     if cached is not None and not req.force_recompute_train_energy:
@@ -436,24 +479,28 @@ def predict(req: PredictRequest):
 
 @app.post("/predict/meta", response_model=InferenceMeta)
 def predict_meta(req: PredictRequest):
-    checkpoint = resolve_checkpoint_name(req.dataset, None)
+    checkpoint = resolve_checkpoint_name(req.dataset)
 
     cached = load_inference_cache(req.dataset, checkpoint)
     if cached is not None and not req.force_recompute_train_energy:
         best_pred_pa = np.asarray(cached.get("pred_pa", []), dtype=int)
+        start_time = time.time()
         return InferenceMeta(
             dataset=req.dataset,
-            checkpoint=checkpoint,
             total_points=int(len(best_pred_pa)),
             anomaly_points=int(np.sum(best_pred_pa)),
-            inference_time_ms=float(0.0),
-            train_energy_time_ms=float(0.0),
+            inference_time_ms=float(cached.get("inference_time_ms", (time.time() - start_time) * 1000.0)),
+            train_energy_time_ms=float(cached.get("train_energy_time_ms", 0.0)),
             threshold_ratio=float(cached.get("ratio", 1.0)),
-            input_dim=int(0),
-            win_size=int(0),
+            input_dim=int(cached.get("input_dim", 0)),
+            win_size=int(cached.get("win_size", 0)),
             prec_pa=float(cached.get("prec_pa", 0.0)),
             rec_pa=float(cached.get("rec_pa", 0.0)),
             f1_pa=float(cached.get("f1_pa", 0.0)),
+            auc_roc=float(cached.get("auc_roc", 0.0)),
+            auc_pr=float(cached.get("auc_pr", 0.0)),
+            vus_roc=float(cached.get("vus_roc", 0.0)),
+            vus_pr=float(cached.get("vus_pr", 0.0)),
         )
 
     try:
@@ -474,7 +521,6 @@ def predict_meta(req: PredictRequest):
 
     return InferenceMeta(
         dataset=req.dataset,
-        checkpoint=checkpoint,
         total_points=int(len(best_pred_pa)),
         anomaly_points=anomaly_points,
         inference_time_ms=float(inference_time_ms),
@@ -485,4 +531,8 @@ def predict_meta(req: PredictRequest):
         prec_pa=float(best_results.get("prec_pa", 0.0)),
         rec_pa=float(best_results.get("rec_pa", 0.0)),
         f1_pa=float(best_results.get("f1_pa", 0.0)),
+        auc_roc=float(best_results.get("auc_roc", 0.0)),
+        auc_pr=float(best_results.get("auc_pr", 0.0)),
+        vus_roc=float(best_results.get("vus_roc", 0.0)),
+        vus_pr=float(best_results.get("vus_pr", 0.0)),
     )
